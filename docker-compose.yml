@@ -33,16 +33,16 @@ services:
       - "${IOTA_NORTH_PORT}:${IOTA_NORTH_PORT}" # e.g., localhost:4041 for device traffic
       - "${IOTA_SOUTH_PORT}:${IOTA_SOUTH_PORT}" # South Port for commands
     environment:
-      - IOTA_CB_HOST=orion                    # Context Broker 的主機名稱 (service name)
-      - IOTA_CB_PORT=${ORION_PORT}            # Context Broker 的連接埠
-      - IOTA_NORTH_PORT=${IOTA_NORTH_PORT}    # Agent 監聽設備請求的連接埠
-      - IOTA_SOUTH_PORT=${IOTA_SOUTH_PORT}    # 接受Context Broker的指令
-      - IOTA_LOG_LEVEL=DEBUG                  # 啟用詳細日誌
-      - IOTA_TIMESTAMP=true                   # 自動加上時間戳
+      - IOTA_CB_HOST=orion                    # Context Broker hostname (service name)
+      - IOTA_CB_PORT=${ORION_PORT}            # Context Broker port
+      - IOTA_NORTH_PORT=${IOTA_NORTH_PORT}    # Port for device requests to the agent
+      - IOTA_SOUTH_PORT=${IOTA_SOUTH_PORT}    # Port for commands from the Context Broker
+      - IOTA_LOG_LEVEL=DEBUG                  # Enable verbose logging
+      - IOTA_TIMESTAMP=true                   # Automatically append timestamps
       - IOTA_REGISTRY_TYPE=mongodb
-      - IOTA_MONGO_HOST=mongo-db              # Agent 自身也需要連接 MongoDB
+      - IOTA_MONGO_HOST=mongo-db              # IoT Agent must also connect to MongoDB
       - IOTA_MONGO_PORT=${MONGO_DB_PORT}
-      - IOTA_MONGO_DB=iotagentjson            # 為 Agent 指定不同的資料庫名稱
+      - IOTA_MONGO_DB=iotagentjson            # Separate database name for the IoT Agent
       - IOTA_PROVIDER_URL=http://iot-agent-json:${IOTA_NORTH_PORT}
       - IOTA_HTTP_PORT=${IOTA_SOUTH_PORT}
     healthcheck:

@@ -1,7 +1,7 @@
 #!/bin/bash
 source .env
 
-# 从 .env 读取 Odoo 配置，如果没有设置则使用默认值
+# Read Odoo configuration from .env, or use default values if not set
 ODOO_HOST="${ODOO_HOST:-odoo}"
 ODOO_PORT="${ODOO_PORT:-8069}"
 
