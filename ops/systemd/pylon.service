@@ -1,0 +1,18 @@
+# Install: Run ./setup.sh and choose "Install systemd service", or manually:
+#   sed 's|@INSTALL_DIR@|/path/to/LQS-IoT_Pylon|' ops/systemd/pylon.service | sudo tee /etc/systemd/system/pylon.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now pylon
+
+[Unit]
+Description=LQS-IoT Pylon (Orion + IoT Agent + MongoDB)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=@INSTALL_DIR@
+ExecStart=@INSTALL_DIR@/run.sh
+ExecStop=/usr/bin/docker compose --env-file @INSTALL_DIR@/config/config.env down
+
+[Install]
+WantedBy=multi-user.target

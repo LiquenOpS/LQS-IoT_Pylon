@@ -6,7 +6,7 @@ LQS-IoT_Pylon is the "steel pylon" of factory digitalisation—a lightweight inf
 
 - **Component-based design**: One service per folder; pick only the modules you need for POC or production.
 - **Digital Twin**: FIWARE Orion at the core for standardised device state modelling and real-time sync.
-- **Deployment-friendly**: Copy `config.example` to `config`, run `ops/init-pylon.sh`, and you have an industrial-grade data exchange platform.
+- **Deployment-friendly**: Run `./setup.sh` once; use `./run.sh` to start/restart the stack.
 - **Extensible**: Structure is ready for future additions (MQTT, Node-RED, time-series DB).
 
 ### Layout
@@ -23,33 +23,29 @@ LQS-IoT_Pylon/
 ├── config.example/           # Config template (copy to config/ when deploying)
 │   └── config.env            # Global env (ports, hosts, FIWARE headers, Odoo URL)
 │
-├── ops/                      # Ops and deployment
-│   ├── init-pylon.sh         # Init: Docker network, stack up, provision & subscription
+├── setup.sh                  # One-time setup (config, provision, subscription, systemd)
+├── run.sh                    # Start stack (docker compose up -d)
+├── ops/
 │   ├── backup-db.sh          # MongoDB backup
-│   ├── provision_service_group.sh  # IoT Agent service group provisioning
-│   └── register_subscription.sh    # Orion subscription (notify Odoo)
+│   ├── provision_service_group.sh
+│   ├── register_subscription.sh
+│   └── systemd/pylon.service # Systemd unit (start on boot)
 │
 └── README.md
 ```
 
 ### Quick start
 
-1. **Prepare config**
+1. **Run setup** (one-time)
    ```bash
-   cp -r config.example config
-   # Edit config/config.env (ports, Odoo host, etc.)
+   ./setup.sh
    ```
+   This: copies `config.example` to `config`, creates Docker network, starts stack, provisions IoT Agent service groups, registers Orion subscription, optionally installs systemd.
 
-2. **Initialise Pylon**
+2. **Start/restart** (after `docker compose down` or reboot)
    ```bash
-   ./ops/init-pylon.sh
+   ./run.sh
    ```
-
-   This script will:
-   - Ensure Docker external network `odobundle-codebase_odoo-net` exists (create if missing)
-   - Run `docker compose up -d` (Orion, IoT Agent JSON, MongoDB)
-   - Run `ops/provision_service_group.sh` (Signage / NeoPixel service groups)
-   - Run `ops/register_subscription.sh` (Orion subscription → Odoo `/update_last_seen`)
 
 3. **Check services**
    ```bash
