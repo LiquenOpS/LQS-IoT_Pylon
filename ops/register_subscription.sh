@@ -2,16 +2,13 @@
 
 set -euo pipefail
 
-# Allow overriding env file; default to ./config/.env, then fall back to .env
-ENV_FILE="${ENV_FILE:-./config/.env}"
+# Allow overriding env file; default to ./config/config.env
+ENV_FILE="${ENV_FILE:-./config/config.env}"
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
   source "${ENV_FILE}"
-elif [[ -f ".env" ]]; then
-  # shellcheck disable=SC1091
-  source ".env"
 else
-  echo "Env file not found. Create ./config/.env or .env first." >&2
+  echo "Env file not found. Copy config.example to config, edit config/config.env." >&2
   exit 1
 fi
 

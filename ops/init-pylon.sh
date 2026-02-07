@@ -15,8 +15,13 @@ else
   echo "    Network '${NETWORK_NAME}' already exists."
 fi
 
+ENV_FILE="${ROOT_DIR}/config/config.env"
+if [[ ! -f "${ENV_FILE}" ]]; then
+  echo "Error: config/config.env not found. Copy config.example to config first." >&2
+  exit 1
+fi
 echo "==> [pylon] Starting core FIWARE stack (Orion + IoT Agent + MongoDB)..."
-docker compose up -d
+docker compose --env-file "${ENV_FILE}" up -d
 
 echo "==> [pylon] Waiting a few seconds for services to boot..."
 sleep 5

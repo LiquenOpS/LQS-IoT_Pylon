@@ -21,7 +21,7 @@ LQS-IoT_Pylon/
 │   └── mongodb/              # MongoDB for Orion and IoT Agent
 │
 ├── config.example/           # Config template (copy to config/ when deploying)
-│   └── .env                  # Global env (ports, hosts, FIWARE headers, Odoo URL)
+│   └── config.env            # Global env (ports, hosts, FIWARE headers, Odoo URL)
 │
 ├── ops/                      # Ops and deployment
 │   ├── init-pylon.sh         # Init: Docker network, stack up, provision & subscription
@@ -37,7 +37,7 @@ LQS-IoT_Pylon/
 1. **Prepare config**
    ```bash
    cp -r config.example config
-   # Edit config/.env (ports, Odoo host, etc.)
+   # Edit config/config.env (ports, Odoo host, etc.)
    ```
 
 2. **Initialise Pylon**
