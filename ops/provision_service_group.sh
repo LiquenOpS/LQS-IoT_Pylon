@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-# Allow overriding env file; default to ./config/config.env
-ENV_FILE="${ENV_FILE:-./config/config.env}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="${ENV_FILE:-$ROOT/config/config.env}"
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
   source "${ENV_FILE}"
@@ -17,8 +17,8 @@ ORION_PORT="${ORION_PORT:-1026}"
 
 ORION_BROKER="http://${ORION_HOST}:${ORION_PORT}"
 
-echo "Provisioning IoT Agent with Service Groups..."
-echo "---------------------------------------------"
+echo "Provisioning IoT Agent with Yardmaster service group..."
+echo "------------------------------------------------------"
 
 HTTP_CODE="$(
   curl -s -o /dev/null -w "%{http_code}" -L -X POST "http://${IOTA_HOST}:${IOTA_NORTH_PORT}/iot/services" \
@@ -28,15 +28,9 @@ HTTP_CODE="$(
     --data-raw "{
     \"services\": [
         {
-            \"apikey\": \"SignKey\",
+            \"apikey\": \"YardmasterKey\",
             \"cbroker\": \"${ORION_BROKER}\",
-            \"entity_type\": \"Signage\",
-            \"resource\": \"/iot/json\"
-        },
-        {
-            \"apikey\": \"SignKeyForNeoPixel\",
-            \"cbroker\": \"${ORION_BROKER}\",
-            \"entity_type\": \"NeoPixel\",
+            \"entity_type\": \"Yardmaster\",
             \"resource\": \"/iot/json\"
         }
     ]

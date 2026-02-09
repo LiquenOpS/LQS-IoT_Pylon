@@ -26,7 +26,7 @@ LQS-IoT_Pylon/
 ├── setup.sh                  # One-time setup (config, provision, subscription, systemd)
 ├── run.sh                    # Start stack (docker compose up -d)
 ├── ops/
-│   ├── backup-db.sh          # MongoDB backup
+│   ├── backup_db.sh          # MongoDB backup
 │   ├── provision_service_group.sh
 │   ├── register_subscription.sh
 │   └── systemd/pylon.service # Systemd unit (start on boot)
@@ -56,6 +56,6 @@ LQS-IoT_Pylon/
 
 4. **Backup MongoDB**
    ```bash
-   ./ops/backup-db.sh
+   ./ops/backup_db.sh
    # Output: ./backups/mongo-backup-YYYYMMDD-HHMMSS.gz
    ```

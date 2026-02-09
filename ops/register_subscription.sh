@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-# Allow overriding env file; default to ./config/config.env
-ENV_FILE="${ENV_FILE:-./config/config.env}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="${ENV_FILE:-$ROOT/config/config.env}"
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
   source "${ENV_FILE}"
@@ -18,8 +18,8 @@ ORION_PORT="${ORION_PORT:-1026}"
 
 ODOO_URL="http://${ODOO_HOST}:${ODOO_PORT}/update_last_seen"
 
-echo "Registering Orion subscription for Signage & NeoPixel..."
-echo "---------------------------------------------------------"
+echo "Registering Orion subscription for Yardmaster..."
+echo "------------------------------------------------"
 
 HTTP_CODE="$(
   curl -s -o /dev/null -w "%{http_code}" -L -X POST "http://${HOST}:${ORION_PORT}/v2/subscriptions" \
@@ -27,21 +27,17 @@ HTTP_CODE="$(
     -H "${HEADER_FIWARE_SERVICE}" \
     -H "${HEADER_FIWARE_SERVICEPATH}" \
     --data-raw "{
-  \"description\": \"Notify Odoo when display status changes\",
+  \"description\": \"Notify Odoo when Yardmaster deviceStatus changes\",
   \"subject\": {
     \"entities\": [
       {
         \"idPattern\": \".*\",
-        \"type\": \"Signage\"
-      },
-      {
-        \"idPattern\": \".*\",
-        \"type\": \"NeoPixel\"
+        \"type\": \"Yardmaster\"
       }
     ],
     \"condition\": {
       \"attrs\": [
-        \"device_status\"
+        \"deviceStatus\"
       ]
     }
   },

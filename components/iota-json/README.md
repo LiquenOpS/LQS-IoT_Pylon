@@ -6,6 +6,6 @@ and future deployment assets.
 - The running instance is defined in the root `docker-compose.yml` as service `iot-agent-json`.
 - Use this folder for:
   - Service group / device registration templates
-  - Example payloads from field devices (PLC, sensors, NeoPixel, signage)
+  - Example payloads from field devices (Yardmaster gateway; PLC, sensors as future types)
   - Any per-environment overrides for the IoT Agent
 
