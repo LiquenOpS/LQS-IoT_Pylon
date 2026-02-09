@@ -14,16 +14,16 @@
 | **2** | **Existing type + new features** | Yardmaster gains lipstick machine support (same Yardmaster, new capability) | Provision template only; re-provision instances |
 | **3** | **New device instance** | Adding another physical Glimmer+Yardmaster unit | New device_id, endpoint; same type and template |
 
-**Discovery** (planned, not yet implemented): applies to (3). See [§6 Discovery Plan](#6-discovery-plan-planned).
+**Discovery**: applies to (3). See [§6 Discovery](#6-discovery).
 
 ---
 
 ## 2. User Entry Points (No Direct `ops/` Execution)
 
-Users only run `./setup.sh` or `./run.sh` at the repo root. `ops/` scripts are internal. `setup.sh` is interactive — choose **Install essentials**, **Provision**, or **Install systemd** as needed. Run Install essentials first; edit config; then Provision.
+Users only run `./setup.sh` or `./run.sh` at the repo root. `ops/` scripts are internal. Pylon and Yardmaster each have a `setup.sh`; choose **Install essentials**, **Provision**, or **Install systemd** as needed. Run Install essentials first; edit config; then Provision.
 
 **Config and prompts**:
-- `config.example/` holds templates with sensible defaults. `setup.sh` copies to `config/` if missing.
+- `config.example/` holds templates with sensible defaults. Each repo's `setup.sh` copies to `config/` if missing.
 - Pylon: user may edit `config/config.env` (ports, Odoo host). Provision reads from config; no extra prompts.
 - Yardmaster: setup prompts for `DEVICE_ID`, `DEVICE_NAME`, capabilities (Signage/Anthias, LED-strip/Glimmer — Yardmaster-internal). `config/config.env` needs `IOTA_HOST`, `YARDMASTER_HOST`, `YARDMASTER_PORT`, `API_KEY` (must match Pylon service group: `YardmasterKey`). Example defaults: `IOTA_HOST=localhost`, `YARDMASTER_HOST=host.docker.internal`, `YARDMASTER_PORT=8080`.
 
@@ -90,7 +90,7 @@ For a brand-new deployment, the flow is 1 → 2 (if needed) → 3:
 |------|--------|-------|
 | 1 | Extend Yardmaster app: new handler, commands, attributes | LQS-IoT_Yardmaster |
 | 2 | Update provision payload: add new commands/attrs | `ops/provision_device.sh` |
-| 3 | On each Yardmaster unit: `./setup.sh` → **Provision** | Yardmaster repo (per instance) |
+| 3 | On each Yardmaster unit: Yardmaster `./setup.sh` → **Provision** | Yardmaster repo (per instance) |
 
 No change to Pylon service groups. Only IOTA device registration is updated.
 
@@ -98,24 +98,27 @@ No change to Pylon service groups. Only IOTA device registration is updated.
 
 **Example**: Another physical Yardmaster+Glimmer unit. Same type, same features.
 
-Adding a new instance requires two steps; each step has two possible methods:
+Adding a new instance requires two steps; each step has two possible methods. **All four combinations are equivalent** — choose freely.
 
 | Step | Purpose | Method A | Method B |
 |------|---------|----------|----------|
-| **1** | Obtain device endpoint | **Discovery**: device registers with Discovery service | **Run script**: manually set config (YARDMASTER_HOST, PORT, etc.) |
-| **2** | Execute provision (POST to IOTA) | **Adopt in Odoo**: click Adopt in Fleet; backend calls provision API | **Run script**: `./setup.sh` → **Provision** |
+| **1** | Obtain device endpoint | **Discovery**: device registers with Discovery service | **Manual**: Yardmaster `./setup.sh` → **Install essentials**, edit config (YARDMASTER_HOST, PORT) |
+| **2** | Execute provision (POST to IOTA) | **Adopt in Odoo**: IoT Device Management → **Pending Devices (Adopt)** → Refresh → click **Adopt** | **Manual**: Yardmaster `./setup.sh` → **Provision** |
 
-Both steps are required. Typical combinations: (Discovery + Adopt) for full automation; (Run script + Run script) for manual; (Discovery + Run script) if Discovery exists but Adopt not yet wired.
+| Combo | Step 1 | Step 2 | How |
+|-------|--------|--------|-----|
+| A+A | Discovery | Adopt | Device registers on boot (`ENABLE_DISCOVERY_REGISTRATION=true`). Odoo → Pending Devices → Adopt. |
+| A+B | Discovery | Manual | Device registers on boot. Yardmaster: `provision_device.sh --from-discovery`. |
+| B+A | Manual | Adopt | Yardmaster: `ops/register_to_discovery.sh` pushes config to Discovery. Odoo → Pending Devices → Adopt. |
+| B+B | Manual | Manual | Yardmaster: `./setup.sh` Install essentials + Provision. |
 
-**Manual (current)** — both steps via script:
+**Manual (B+B)** — both steps via script:
 | Step | Action |
 |------|--------|
-| 1 | On the new unit: `./setup.sh` → **Install essentials**. |
-| 2 | When prompted: enter new `DEVICE_ID`, `DEVICE_NAME` (different from existing units). |
-| 3 | Ensure `config/config.env` has correct `YARDMASTER_HOST` (this machine's reachable address) and `YARDMASTER_PORT`. |
-| 4 | `./setup.sh` → **Provision**. |
+| 1 | On the new unit: Yardmaster `./setup.sh` → **Install essentials**. Enter `DEVICE_ID`, `DEVICE_NAME`. Edit `config/config.env` with `YARDMASTER_HOST`, `YARDMASTER_PORT`. |
+| 2 | Yardmaster `./setup.sh` → **Provision**. |
 
-**Discovery + Adopt (planned)**: Step 1 via Discovery; Step 2 via Adopt in Odoo. See [§6](#6-discovery-plan-planned).
+**Discovery + Adopt (A+A)**: Yardmaster config: `ENABLE_DISCOVERY_REGISTRATION=true`, `DISCOVERY_HOST`, `DISCOVERY_PORT`. Device auto-registers on boot. Odoo: IoT Device Management → **Pending Devices (Adopt)** → fetches from Discovery → click **Adopt**.
 
 ---
 
@@ -123,29 +126,28 @@ Both steps are required. Typical combinations: (Discovery + Adopt) for full auto
 
 **apikey**: Routing key in FIWARE IoT Agent. The Yardmaster service group uses `YardmasterKey`. Yardmaster config must use the same apikey. Device and service group must match.
 
-**Admin-run, not self-registration**: The device does not contact IOTA to register. `setup.sh` (or its internal `ops/` scripts) reads config (IOTA location + device endpoint) and POSTs to IOTA. Endpoint flows: device config → provision script → IOTA (MongoDB).
+**Admin-run, not self-registration**: The device does not contact IOTA to register. Yardmaster `setup.sh` (or its internal `ops/` scripts) reads config (IOTA location + device endpoint) and POSTs to IOTA. Endpoint flows: device config → provision script → IOTA (MongoDB).
 
 ---
 
-## 6. Discovery Plan (Planned)
+## 6. Discovery
 
-Discovery applies to operation (3) — adding new device instances. Per the 2x2 in [§4.3](#43-3-new-device-instance): Discovery covers Step 1 (obtain endpoint); Adopt in Odoo covers Step 2 (execute provision). Goal: UniFi-style "plug in, go to Odoo Fleet, click Adopt."
+Discovery applies to operation (3) — adding new device instances. Runs as part of Pylon (`docker-compose`). REST API:
 
-**Planned flow** (Discovery + Adopt):
-1. Device (Yardmaster) boots and registers with a Discovery service: "I'm device X, my endpoint is http://…".
-2. Discovery service (runs in IoT VLAN per [Deployment Modes](./LQS-IoT_PYLON_DEPLOYMENT_MODES.md)) stores pending devices.
-3. Odoo Fleet queries Discovery, shows "pending" devices.
-4. User clicks **Adopt** → backend triggers provision with the discovered endpoint.
-5. Device is now provisioned; IOTA can push commands to it.
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/devices` | Register device (`device_id`, `device_name`, `endpoint`) |
+| GET | `/devices` | List pending devices |
+| GET | `/devices/{id}` | Get one device |
+| DELETE | `/devices/{id}` | Remove after adopt |
 
-**Options for discovery** (to be decided):
-- **Discovery API**: Device POSTs to a known URL (configurable per deployment). Simple; requires device to know Discovery URL.
-- **mDNS / DNS-SD**: Device advertises; scanner (on IoT VLAN) discovers. Same-LAN only.
-- **MQTT**: Device publishes to broker; Odoo/Discovery subscribes. Works across networks if broker is reachable.
+**Config**: Pylon `config/config.env`: `DISCOVERY_HOST`, `DISCOVERY_PORT` (default 5050). Yardmaster: `DISCOVERY_HOST`, `DISCOVERY_PORT`, `ENABLE_DISCOVERY_REGISTRATION=true` for auto-register on boot.
 
-**Constraints**: IOTA must be able to reach the device endpoint for downlink. If device is behind NAT, consider MQTT transport (device subscribes) or device-initiated tunnel (e.g. Cloudflare Tunnel).
+**Bridges for mixed combos**:
+- **Discovery + Manual provision (A+B)**: `provision_device.sh --from-discovery` fetches endpoint from Discovery.
+- **Manual + Adopt (B+A)**: `ops/register_to_discovery.sh` pushes config to Discovery; Odoo Adopt picks it up.
 
-**Status**: Not implemented. Manual provision via `./setup.sh` is the current path.
+**Constraints**: IOTA must be able to reach the device endpoint for downlink. If device is behind NAT, consider MQTT transport or device-initiated tunnel (e.g. Cloudflare Tunnel).
 
 ---
 
@@ -155,23 +157,23 @@ Discovery applies to operation (3) — adding new device instances. Per the 2x2 
 
 1. Edit `ops/provision_service_group.sh`; add new service to payload.
 2. Pylon: `./setup.sh` → **Provision**.
-3. Create provision script in new device repo; add `./setup.sh` entry point.
+3. Create provision script in new device repo; add that repo's `./setup.sh` entry point.
 
 ### 7.2 (2) Update Existing Type (New Features)
 
 1. Update device provision script (new commands/attributes).
-2. On each Yardmaster unit: `./setup.sh` → **Provision**. No Pylon restart.
+2. On each Yardmaster unit: Yardmaster `./setup.sh` → **Provision**. No Pylon restart.
 
 ### 7.3 (3) Add New Instance
 
-1. On the new unit: `./setup.sh` → **Install essentials** then **Provision**, with new DEVICE_ID, DEVICE_NAME, correct YARDMASTER_HOST.
+1. On the new unit: Yardmaster `./setup.sh` → **Install essentials** then **Provision**, with new DEVICE_ID, DEVICE_NAME, correct YARDMASTER_HOST.
 2. No Pylon change.
 
 ### 7.4 Change Device Endpoint
 
 1. Update device config (e.g. `YARDMASTER_PORT`, host).
 2. Restart device process: `./run.sh`.
-3. `./setup.sh` → **Provision** so IOTA has the new endpoint.
+3. Yardmaster `./setup.sh` → **Provision** so IOTA has the new endpoint.
 
 ### 7.5 Remove Device or Service Group
 
@@ -207,5 +209,5 @@ All require FIWARE service and servicepath headers.
 | Operation | User action |
 |-----------|-------------|
 | (1) New type | Edit ops; Pylon `./setup.sh` → **Provision**; add device repo setup |
-| (2) Type + features | Edit provision payload; `./setup.sh` → **Provision** on each unit |
-| (3) New instance | `./setup.sh` → **Install essentials** then **Provision** on new unit (manual). Later: Discovery + Adopt (planned) |
+| (2) Type + features | Edit provision payload; Yardmaster `./setup.sh` → **Provision** on each unit |
+| (3) New instance | Any of 4 combos: Discovery or Manual for Step 1; Adopt or Provision for Step 2. See [§4.3](#43-3-new-device-instance). |
