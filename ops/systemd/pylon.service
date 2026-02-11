@@ -11,8 +11,8 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=@INSTALL_DIR@
-ExecStart=@INSTALL_DIR@/run.sh
-ExecStop=/usr/bin/docker compose --env-file @INSTALL_DIR@/config/config.env down
+ExecStart=/bin/bash -c 'source @INSTALL_DIR@/config/config.env 2>/dev/null; @INSTALL_DIR@/run.sh --mode ${PYLON_MODE:-full}'
+ExecStop=@INSTALL_DIR@/ops/stop.sh
 
 [Install]
 WantedBy=multi-user.target

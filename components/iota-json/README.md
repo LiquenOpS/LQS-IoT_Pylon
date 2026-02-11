@@ -3,7 +3,7 @@
 This folder is the home for **FIWARE IoT Agent for JSON** specific configuration
 and future deployment assets.
 
-- The running instance is defined in the root `docker-compose.yml` as service `iot-agent-json`.
+- The running instance is defined in the root `docker-compose.south.yml` as service `iot-agent-json`.
 - Use this folder for:
   - Service group / device registration templates
   - Example payloads from field devices (Yardmaster gateway; PLC, sensors as future types)

@@ -13,23 +13,29 @@ LQS-IoT_Pylon is the "steel pylon" of factory digitalisation—a lightweight inf
 
 ```txt
 LQS-IoT_Pylon/
-├── docker-compose.yml        # Assembly: Orion / IoT Agent / MongoDB on the Pylon
+├── docker-compose.north.yml  # Orion + MongoDB (Intranet)
+├── docker-compose.south.yml  # IoT Agent (device-facing)
 │
 ├── components/               # Core components (one service per folder)
 │   ├── orion/                # FIWARE Orion Context Broker
 │   ├── iota-json/            # IoT Agent for JSON (device ingress/egress)
 │   └── mongodb/              # MongoDB for Orion and IoT Agent
 │
-├── config.example/           # Config template (copy to config/ when deploying)
-│   └── config.env            # Global env (ports, hosts, FIWARE headers, Odoo URL)
-│
-├── setup.sh                  # One-time setup (config, provision, subscription, systemd)
-├── run.sh                    # Start stack (docker compose up -d)
+├── config.example/
+│   └── config.env
+├── setup.sh                  # Install North / South / Full-stack
+├── run.sh                    # Start stack (north | south | full)
 ├── ops/
-│   ├── backup_db.sh          # MongoDB backup
+│   ├── stop.sh               # Stop stack (reads PYLON_MODE)
+│   ├── backup_db.sh
 │   ├── provision_service_group.sh
 │   ├── register_subscription.sh
-│   └── systemd/pylon.service # Systemd unit (start on boot)
+│   └── systemd/pylon.service
+├── debug/
+│   ├── list_devices.sh       # IOTA device registry
+│   ├── list_entities.sh      # Orion NGSI entities
+│   ├── list_services.sh      # IOTA service groups
+│   └── send_command.sh       # Interactive: send command to device via Orion
 │
 └── README.md
 ```
@@ -40,11 +46,11 @@ LQS-IoT_Pylon/
    ```bash
    ./setup.sh
    ```
-   This: copies `config.example` to `config`, creates Docker network, starts stack, provisions IoT Agent service groups, registers Orion subscription, optionally installs systemd.
+   Choose: North / South / Full-stack. This creates config, network, starts stack.
 
-2. **Start/restart** (after `docker compose down` or reboot)
+2. **Start/restart**
    ```bash
-   ./run.sh
+   ./run.sh [--mode north|south|full]   # default: PYLON_MODE from config
    ```
 
 3. **Check services**
@@ -54,8 +60,35 @@ LQS-IoT_Pylon/
    curl "http://localhost:4041/iot/about"     # IoT Agent JSON
    ```
 
-4. **Backup MongoDB**
+4. **List devices / entities** (debug)
+   ```bash
+   ./debug/list_devices.sh    # IOTA device registry
+   ./debug/list_entities.sh   # Orion entities (after first heartbeat)
+   ./debug/list_services.sh   # IOTA service groups
+   ```
+
+5. **Send command** (debug, interactive)
+   ```bash
+   ./debug/send_command.sh    # Pick device, pick command (e.g. LED off), send to Orion
+   ```
+
+6. **Backup MongoDB**
    ```bash
    ./ops/backup_db.sh
    # Output: ./backups/mongo-backup-YYYYMMDD-HHMMSS.gz
    ```
+
+### Deployment scenarios
+
+Odoo, North, South can be on 1–3 hosts. Pylon uses its own network (`pylon-net`); no Odoo compose changes.
+
+| Scenario | Odoo | North | South | ODOO_HOST | IOTA_CB_HOST |
+|----------|------|-------|-------|-----------|--------------|
+| 1 | A | A | A | host.docker.internal | orion |
+| 2 | A | A | B | host.docker.internal | North IP |
+| 3 | A | B | B | Odoo IP | orion |
+| 4 | A | B | C | Odoo IP | North IP |
+
+**Same-host Odoo**: Orion reaches Odoo via `host.docker.internal` (host published port). Linux/WSL2 supported (North compose adds `extra_hosts`).
+
+See [docs/LQS-IoT_PYLON_DEPLOYMENT_MODES.md](docs/LQS-IoT_PYLON_DEPLOYMENT_MODES.md).

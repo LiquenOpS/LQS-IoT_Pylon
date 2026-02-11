@@ -1,0 +1,50 @@
+# Pylon North: Orion + MongoDB (Intranet). Run with south for full-stack.
+
+services:
+  orion:
+    labels:
+      org.fiware: 'signage-project'
+    image: fiware/orion:${ORION_VERSION}
+    hostname: orion
+    container_name: fiware-orion
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - mongo-db
+    networks:
+      - pylon_net
+    ports:
+      - "${ORION_PORT}:${ORION_PORT}"
+    command: -dbURI mongodb://mongo-db:${MONGO_DB_PORT} -logLevel ${ORION_LOG_LEVEL:-DEBUG} -noCache
+    healthcheck:
+      test: curl --fail -s http://orion:${ORION_PORT}/version || exit 1
+      interval: 5s
+
+  mongo-db:
+    labels:
+      org.fiware: 'signage-project'
+    image: mongo:${MONGO_DB_VERSION}
+    hostname: mongo-db
+    container_name: db-mongo
+    expose:
+      - "${MONGO_DB_PORT}"
+    ports:
+      - "${MONGO_DB_PORT}:${MONGO_DB_PORT}"
+    networks:
+      - pylon_net
+    volumes:
+      - mongo-db:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  pylon_net:
+    name: ${PYLON_NETWORK_NAME:-pylon-net}
+    external: true
+
+volumes:
+  mongo-db: ~
