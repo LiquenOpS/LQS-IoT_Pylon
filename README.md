@@ -30,6 +30,9 @@ LQS-IoT_Pylon/
 │   ├── backup_db.sh
 │   ├── provision_service_group.sh
 │   ├── register_subscription.sh
+│   ├── list_devices.sh       # IOTA device registry
+│   ├── list_entities.sh      # Orion NGSI entities
+│   ├── list_services.sh      # IOTA service groups
 │   └── systemd/pylon.service
 │
 └── README.md
@@ -55,7 +58,14 @@ LQS-IoT_Pylon/
    curl "http://localhost:4041/iot/about"     # IoT Agent JSON
    ```
 
-4. **Backup MongoDB**
+4. **List devices / entities**
+   ```bash
+   ./ops/list_devices.sh    # IOTA device registry
+   ./ops/list_entities.sh   # Orion entities (after first heartbeat)
+   ./ops/list_services.sh   # IOTA service groups
+   ```
+
+5. **Backup MongoDB**
    ```bash
    ./ops/backup_db.sh
    # Output: ./backups/mongo-backup-YYYYMMDD-HHMMSS.gz
