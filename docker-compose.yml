@@ -49,26 +49,6 @@ services:
       test: curl --fail -s http://iot-agent-json:${IOTA_NORTH_PORT}/iot/about || exit 1
       interval: 5s
 
-  # Discovery: pending devices for provisioning (Step 1 ↔ Step 2 bridge)
-  discovery:
-    build:
-      context: .
-      dockerfile: discovery/Dockerfile
-    hostname: discovery
-    container_name: lqs-discovery
-    networks:
-      - odoo_net
-    ports:
-      - "${DISCOVERY_PORT:-5050}:5050"
-    volumes:
-      - discovery_data:/data
-    environment:
-      - DISCOVERY_PORT=5050
-      - DISCOVERY_DATA_FILE=/data/pending_devices.json
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5050/health')"]
-      interval: 10s
-
   # MongoDB Database
   mongo-db:
     labels:
@@ -98,4 +78,3 @@ networks:
 
 volumes:
   mongo-db: ~
-  discovery_data: ~
