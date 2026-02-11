@@ -7,10 +7,12 @@ services:
     image: fiware/orion:${ORION_VERSION}
     hostname: orion
     container_name: fiware-orion
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - mongo-db
     networks:
-      - odoo_net
+      - pylon_net
     ports:
       - "${ORION_PORT}:${ORION_PORT}"
     command: -dbURI mongodb://mongo-db:${MONGO_DB_PORT} -logLevel DEBUG -noCache
@@ -29,7 +31,7 @@ services:
     ports:
       - "${MONGO_DB_PORT}:${MONGO_DB_PORT}"
     networks:
-      - odoo_net
+      - pylon_net
     volumes:
       - mongo-db:/data/db
     healthcheck:
@@ -40,8 +42,8 @@ services:
       start_period: 5s
 
 networks:
-  odoo_net:
-    name: odoobundle-codebase_odoo-net
+  pylon_net:
+    name: ${PYLON_NETWORK_NAME:-pylon-net}
     external: true
 
 volumes:

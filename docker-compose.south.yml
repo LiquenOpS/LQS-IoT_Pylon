@@ -9,7 +9,7 @@ services:
     hostname: iot-agent-json
     container_name: fiware-iot-agent-json
     networks:
-      - odoo_net
+      - pylon_net
     ports:
       - "${IOTA_NORTH_PORT}:${IOTA_NORTH_PORT}"
       - "${IOTA_SOUTH_PORT}:${IOTA_SOUTH_PORT}"
@@ -31,6 +31,6 @@ services:
       interval: 5s
 
 networks:
-  odoo_net:
-    name: odoobundle-codebase_odoo-net
+  pylon_net:
+    name: ${PYLON_NETWORK_NAME:-pylon-net}
     external: true

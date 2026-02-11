@@ -60,3 +60,18 @@ LQS-IoT_Pylon/
    ./ops/backup_db.sh
    # Output: ./backups/mongo-backup-YYYYMMDD-HHMMSS.gz
    ```
+
+### Deployment scenarios
+
+Odoo, North, South can be on 1–3 hosts. Pylon uses its own network (`pylon-net`); no Odoo compose changes.
+
+| Scenario | Odoo | North | South | ODOO_HOST | IOTA_CB_HOST |
+|----------|------|-------|-------|-----------|--------------|
+| 1 | A | A | A | host.docker.internal | orion |
+| 2 | A | A | B | host.docker.internal | North IP |
+| 3 | A | B | B | Odoo IP | orion |
+| 4 | A | B | C | Odoo IP | North IP |
+
+**Same-host Odoo**: Orion reaches Odoo via `host.docker.internal` (host published port). Linux/WSL2 supported (North compose adds `extra_hosts`).
+
+See [docs/LQS-IoT_PYLON_DEPLOYMENT_MODES.md](docs/LQS-IoT_PYLON_DEPLOYMENT_MODES.md).

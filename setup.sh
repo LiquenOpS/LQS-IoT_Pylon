@@ -42,12 +42,13 @@ case "$CHOICE" in
       && sed -i "s/^PYLON_MODE=.*/PYLON_MODE=${PYLON_MODE}/" "$ROOT/config/config.env" \
       || echo "PYLON_MODE=${PYLON_MODE}" >> "$ROOT/config/config.env"
 
+    echo "  See config.example and docs/LQS-IoT_PYLON_DEPLOYMENT_MODES.md for ODOO_HOST, IOTA_* per scenario."
     read -p "Edit config/config.env now? [y/N]: " EDIT
     [[ "$EDIT" =~ ^[yY] ]] && "${EDITOR:-vi}" "$ROOT/config/config.env"
 
     # ---- Docker network ----
     set -a && source "$ROOT/config/config.env" && set +a
-    NETWORK_NAME="${PYLON_NETWORK_NAME:-odobundle-codebase_odoo-net}"
+    NETWORK_NAME="${PYLON_NETWORK_NAME:-pylon-net}"
     echo ""
     echo "==> Ensuring Docker network '${NETWORK_NAME}' exists..."
     if ! docker network ls --format '{{.Name}}' | grep -q "^${NETWORK_NAME}\$"; then

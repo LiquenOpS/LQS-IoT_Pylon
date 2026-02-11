@@ -1,75 +1,88 @@
-# Pylon Deployment Modes (North / South Split)
+# Pylon Deployment Modes
 
-**Scope**: How to run Pylon in different network zones. North (Orion + Mongo) vs South (IOTA) can run on the same host (full-stack) or split across VLANs.
-
----
-
-## 1. Modes Overview
-
-| Mode | Compose | Services | Typical Location |
-|------|---------|----------|------------------|
-| **North** | docker-compose.north.yml | Orion, MongoDB | Intranet VLAN |
-| **South** | docker-compose.south.yml | IoT Agent | IoT VLAN |
-| **Full-stack** | north + south | All of the above | Single host (test/dev) |
-
-**Rationale**: In production, Orion and MongoDB stay in Intranet; IOTA runs in IoT VLAN where devices can reach it. In test/dev, run full-stack on one host.
+**Scope**: Four deployment scenarios for Odoo + Pylon North + Pylon South. Pylon uses its own Docker network (`pylon-net`); no changes to Odoo compose required.
 
 ---
 
-## 2. Setup and Run
+## 1. Four Scenarios
 
-```bash
-# Setup: choose what to run on this host
-./setup.sh   # option 1 → n) North / s) South / f) Full-stack
+| # | Odoo | North | South | ODOO_HOST | IOTA_CB_HOST / IOTA_MONGO_HOST |
+|---|------|-------|-------|-----------|---------------------------------|
+| 1 | A | A | A | host.docker.internal | orion, mongo-db |
+| 2 | A | A | B | host.docker.internal | North host IP |
+| 3 | A | B | B | Odoo host IP | orion, mongo-db |
+| 4 | A | B | C | Odoo host IP | North host IP |
 
-# Run (or use systemd)
-./run.sh north
-./run.sh south
-./run.sh full   # default when PYLON_MODE=full
-```
-
----
-
-## 3. Split Deployment (North and South on Different Hosts)
-
-**North host** (Intranet):
-1. `./setup.sh` → Install essentials → **North**
-2. Ensure Docker network exists (setup creates it)
-3. North runs Orion + Mongo. MongoDB must be reachable from South (port 27017). Orion (1026) must be reachable for subscription registration.
-
-**South host** (IoT VLAN):
-1. Copy config; set `IOTA_CB_HOST` and `IOTA_MONGO_HOST` to North host IP/hostname
-2. `./setup.sh` → Install essentials → **South**
-3. Provision (service groups) runs on South host — POSTs to local IOTA
-
-**Provision and subscription**:
-- Provision: run on South host (POST to IOTA)
-- Register subscription: run on North host (POST to Orion)
+Same letter = same host. All services run in Docker.
 
 ---
 
-## 4. Config for Split
+## 2. Same-Host Odoo: Why host.docker.internal?
 
-| Variable | North host | South host (split) |
-|----------|------------|--------------------|
-| IOTA_CB_HOST | orion (n/a) | North host IP |
-| IOTA_MONGO_HOST | mongo-db (n/a) | North host IP |
-| PYLON_MODE | north | south |
+When Odoo and Pylon are on the same host, Orion (in Docker) must reach Odoo (in Docker). We use the host's published port instead of a shared Docker network:
 
----
-
-## 5. Network and Firewall
-
-- IoT VLAN → Intranet: allow Orion (1026), MongoDB (27017)
-- MongoDB on North: bind to interface reachable from South, or use tunnel
-- Same Docker network name on both hosts if Odoo shares it; otherwise create network on each
+- Odoo publishes 8069 to the host
+- Orion curls `host.docker.internal:8069` → host forwards to Odoo
+- **No Odoo compose changes**. Pylon North adds `extra_hosts: host.docker.internal:host-gateway`
 
 ---
 
-## 6. Checklist for Split Deployment
+## 3. Linux and WSL2
 
-- [ ] North host: `./setup.sh` → North; MongoDB listen on reachable interface
-- [ ] South host: set `IOTA_CB_HOST`, `IOTA_MONGO_HOST` in config; `./setup.sh` → South
-- [ ] Firewall: allow South → North on 1026, 27017
-- [ ] Provision: run on South host after both are up
+| Platform | host.docker.internal |
+|----------|----------------------|
+| Docker Desktop (Mac/Windows) | Built-in |
+| Linux (Docker 20.10+) | Via `extra_hosts: host-gateway` — Pylon North adds this |
+| WSL2 + Docker in WSL2 | Same as Linux — works |
+| WSL2 + Docker Desktop (WSL2 backend) | Built-in |
+
+Pylon North compose includes `extra_hosts` so Orion can reach the host on all supported platforms.
+
+---
+
+## 4. Scenario Details
+
+### Scenario 1: All on same host (A)
+
+- ODOO_HOST=host.docker.internal
+- IOTA_CB_HOST=orion, IOTA_MONGO_HOST=mongo-db
+- Setup: Full-stack
+- Pylon uses pylon-net. Odoo uses its own network. No shared network.
+
+### Scenario 2: Odoo+North on A, South on B
+
+- Host A: Odoo, North. ODOO_HOST=host.docker.internal
+- Host B: South. IOTA_CB_HOST=A's IP, IOTA_MONGO_HOST=A's IP
+- Firewall: B → A on 1026, 27017
+
+### Scenario 3: Odoo on A, North+South on B
+
+- Host A: Odoo
+- Host B: North, South. ODOO_HOST=A's IP. IOTA_CB_HOST=orion, IOTA_MONGO_HOST=mongo-db
+- Firewall: B → A on 8069 (if Odoo needs to be reached)
+
+### Scenario 4: All separate (A, B, C)
+
+- ODOO_HOST=A's IP
+- IOTA_CB_HOST=B's IP, IOTA_MONGO_HOST=B's IP
+- Firewall: C → B on 1026, 27017; B → A on 8069 as needed
+
+---
+
+## 5. Config Summary
+
+| Variable | Scenario 1 | 2 | 3 | 4 |
+|----------|------------|---|---|---|
+| ODOO_HOST | host.docker.internal | host.docker.internal | A's IP | A's IP |
+| IOTA_CB_HOST | orion | North IP | orion | North IP |
+| IOTA_MONGO_HOST | mongo-db | North IP | mongo-db | North IP |
+
+---
+
+## 6. Checklist
+
+- [ ] Set PYLON_MODE (north / south / full) in setup
+- [ ] Set ODOO_HOST per scenario
+- [ ] Set IOTA_CB_HOST, IOTA_MONGO_HOST when South is on a different host
+- [ ] Provision: run on South host
 - [ ] Register subscription: run on North host
