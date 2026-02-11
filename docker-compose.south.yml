@@ -14,16 +14,18 @@ services:
       - "${IOTA_NORTH_PORT}:${IOTA_NORTH_PORT}"
       - "${IOTA_SOUTH_PORT}:${IOTA_SOUTH_PORT}"
     environment:
+      - IOTA_MQTT_DISABLED=${IOTA_MQTT_DISABLED:-true}
+      - IOTA_AMQP_DISABLED=${IOTA_AMQP_DISABLED:-true}
       - IOTA_CB_HOST=${IOTA_CB_HOST:-orion}
       - IOTA_CB_PORT=${ORION_PORT}
       - IOTA_NORTH_PORT=${IOTA_NORTH_PORT}
       - IOTA_SOUTH_PORT=${IOTA_SOUTH_PORT}
-      - IOTA_LOG_LEVEL=DEBUG
-      - IOTA_TIMESTAMP=true
-      - IOTA_REGISTRY_TYPE=mongodb
+      - IOTA_LOG_LEVEL=${IOTA_LOG_LEVEL:-DEBUG}
+      - IOTA_TIMESTAMP=${IOTA_TIMESTAMP:-true}
+      - IOTA_REGISTRY_TYPE=${IOTA_REGISTRY_TYPE:-mongodb}
       - IOTA_MONGO_HOST=${IOTA_MONGO_HOST:-mongo-db}
       - IOTA_MONGO_PORT=${MONGO_DB_PORT}
-      - IOTA_MONGO_DB=iotagentjson
+      - IOTA_MONGO_DB=${IOTA_MONGO_DB:-iotagentjson}
       - IOTA_PROVIDER_URL=http://iot-agent-json:${IOTA_NORTH_PORT}
       - IOTA_HTTP_PORT=${IOTA_SOUTH_PORT}
     healthcheck:

@@ -15,7 +15,7 @@ services:
       - pylon_net
     ports:
       - "${ORION_PORT}:${ORION_PORT}"
-    command: -dbURI mongodb://mongo-db:${MONGO_DB_PORT} -logLevel DEBUG -noCache
+    command: -dbURI mongodb://mongo-db:${MONGO_DB_PORT} -logLevel ${ORION_LOG_LEVEL:-DEBUG} -noCache
     healthcheck:
       test: curl --fail -s http://orion:${ORION_PORT}/version || exit 1
       interval: 5s
