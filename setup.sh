@@ -10,9 +10,10 @@ echo "Pylon setup — what would you like to do?"
 echo "  1) Install essentials (config, network, start stack)"
 echo "  2) Provision (service groups + subscription)"
 echo "  3) Install systemd (start on boot)"
-echo "  4) Exit"
+echo "  4) Uninstall (stop stack, remove systemd)"
+echo "  5) Exit"
 echo ""
-read -p "Choice [1-4]: " CHOICE
+read -p "Choice [1-5]: " CHOICE
 
 case "$CHOICE" in
   1)
@@ -24,7 +25,7 @@ case "$CHOICE" in
       echo "  -> config/config.env created."
     fi
     read -p "Edit config/config.env now (ports, Odoo host, etc.)? [y/N]: " EDIT
-    [[ "$EDIT" =~ ^[yY] ]] && "${EDITOR:-nano}" "$ROOT/config/config.env"
+    [[ "$EDIT" =~ ^[yY] ]] && "${EDITOR:-vi}" "$ROOT/config/config.env"
 
     # ---- Docker network ----
     [ -f "$ROOT/config/config.env" ] && set -a && source "$ROOT/config/config.env" && set +a
@@ -68,6 +69,30 @@ case "$CHOICE" in
     fi
     ;;
   4)
+    echo "==> Uninstalling Pylon..."
+    SVC_FILE="/etc/systemd/system/pylon.service"
+    if [ -f "$SVC_FILE" ]; then
+      sudo -v
+      sudo systemctl stop pylon 2>/dev/null || true
+      sudo systemctl disable pylon 2>/dev/null || true
+      sudo rm -f "$SVC_FILE"
+      sudo systemctl daemon-reload
+      echo "  -> systemd service removed."
+    fi
+    if [ -f "$ROOT/config/config.env" ]; then
+      set -a && source "$ROOT/config/config.env" && set +a
+      echo "  -> Stopping Docker stack..."
+      docker compose --env-file "$ROOT/config/config.env" -f "$ROOT/docker-compose.yml" down
+    fi
+    read -p "Remove config/ and Docker volumes? [y/N]: " Y
+    if [[ "$Y" =~ ^[yY] ]]; then
+      [ -f "$ROOT/config/config.env" ] && docker compose --env-file "$ROOT/config/config.env" -f "$ROOT/docker-compose.yml" down -v 2>/dev/null || true
+      rm -rf "$ROOT/config"
+      echo "  -> config and volumes removed."
+    fi
+    echo "Done."
+    ;;
+  5)
     echo "Bye."
     ;;
   *)
