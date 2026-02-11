@@ -164,8 +164,34 @@ Discovery applies to operation (3) — adding new device instances. Alternative 
 
 ### 7.5 Remove Device or Service Group
 
-- Device: `DELETE /iot/devices/{deviceId}` (if supported) or manual MongoDB.
-- Service group: Depends on IoT Agent; some support DELETE.
+**Device (Deprovision)**:
+- Yardmaster: `./setup.sh` → **Deprovision** (option 3). Runs `ops/deprovision_device.sh` which:
+  1. `DELETE /iot/devices/{deviceId}` to remove from IOTA
+  2. `DELETE /v2/entities/{entityName}` to remove from Orion (if ORION_HOST is set in config)
+- Or run `ops/deprovision_device.sh` directly from Yardmaster repo.
+
+**Orion entity deletion** (if not using deprovision script):
+```bash
+curl -X DELETE "http://${ORION_HOST}:${ORION_PORT}/v2/entities/{entityName}" \
+  -H "Fiware-Service: ${FIWARE_SERVICE}" \
+  -H "Fiware-Servicepath: ${FIWARE_SERVICEPATH}"
+```
+Returns 204 on success.
+
+**Service group**: Depends on IoT Agent; some support DELETE.
+
+### 7.6 Re-Test Flow (Full Reset)
+
+To re-test provisioning and adopt from scratch:
+
+| Step | Action |
+|------|--------|
+| 1 | Yardmaster: `./setup.sh` → **Deprovision** (option 3) to remove from IOTA and Orion |
+| 2 | Odoo: Fleet → Device List → open device → **Unadopt** (removes LED-Strip/Signage mgmt records) |
+| 3 | (Optional) Delete device from Fleet if you want it gone from Odoo — device disappears when Orion entity is deleted and no more heartbeats |
+| 4 | Yardmaster: `./setup.sh` → **Install essentials** → answer "y" to "Reset device config for re-test" if re-prompting ID/name |
+| 5 | Yardmaster: `./setup.sh` → **Provision** |
+| 6 | Wait for heartbeat; device appears in Fleet; run Adopt again |
 
 ---
 
