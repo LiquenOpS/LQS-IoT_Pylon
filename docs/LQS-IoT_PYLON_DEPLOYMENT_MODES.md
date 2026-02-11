@@ -1,96 +1,75 @@
-# Pylon Deployment Modes (VLAN Split)
+# Pylon Deployment Modes (North / South Split)
 
-**Scope**: How to run Pylon in different network zones using Docker Compose profiles. Supports Intranet-only, IoT-only, and full-stack (test/dev).
+**Scope**: How to run Pylon in different network zones. North (Orion + Mongo) vs South (IOTA) can run on the same host (full-stack) or split across VLANs.
 
 ---
 
 ## 1. Modes Overview
 
-| Mode | Profile | Services | Typical Location |
+| Mode | Compose | Services | Typical Location |
 |------|---------|----------|------------------|
-| **Intranet** | `intranet` | Orion, MongoDB | Intranet VLAN |
-| **IoT** | `iot` | IoT Agent, Discovery (future) | IoT VLAN |
-| **Full-stack (test/dev)** | (none, or both) | All of the above | Single host |
+| **North** | docker-compose.north.yml | Orion, MongoDB | Intranet VLAN |
+| **South** | docker-compose.south.yml | IoT Agent | IoT VLAN |
+| **Full-stack** | north + south | All of the above | Single host (test/dev) |
 
-**Rationale**: In production, Orion and MongoDB stay in Intranet; IOTA and discovery run in IoT VLAN where devices can reach them (or be discovered). In test/dev, everything runs together on one host for simplicity.
+**Rationale**: In production, Orion and MongoDB stay in Intranet; IOTA runs in IoT VLAN where devices can reach it. In test/dev, run full-stack on one host.
 
 ---
 
-## 2. Profile Usage
+## 2. Setup and Run
 
 ```bash
-# Intranet only (Orion + MongoDB)
-docker compose --profile intranet up -d
+# Setup: choose what to run on this host
+./setup.sh   # option 1 → n) North / s) South / f) Full-stack
 
-# IoT only (IOTA + discovery) — IOTA needs Orion/Mongo reachable via config
-docker compose --profile iot up -d
-
-# Test/dev: all services
-docker compose --profile intranet --profile iot up -d
-# or: docker compose up -d   (if default is full-stack)
+# Run (or use systemd)
+./run.sh north
+./run.sh south
+./run.sh full   # default when PYLON_MODE=full
 ```
 
 ---
 
-## 3. Network Flow (Split Deployment)
+## 3. Split Deployment (North and South on Different Hosts)
 
-When split across VLANs:
+**North host** (Intranet):
+1. `./setup.sh` → Install essentials → **North**
+2. Ensure Docker network exists (setup creates it)
+3. North runs Orion + Mongo. MongoDB must be reachable from South (port 27017). Orion (1026) must be reachable for subscription registration.
 
-- **Intranet host**: Orion, MongoDB. No direct device traffic.
-- **IoT host**: IOTA, discovery. Devices talk to IOTA and discovery only.
+**South host** (IoT VLAN):
+1. Copy config; set `IOTA_CB_HOST` and `IOTA_MONGO_HOST` to North host IP/hostname
+2. `./setup.sh` → Install essentials → **South**
+3. Provision (service groups) runs on South host — POSTs to local IOTA
 
-IOTA on the IoT host must reach:
-- Orion (Context Broker) — `IOTA_CB_HOST` → Intranet host IP/hostname
-- MongoDB (device registry) — `IOTA_MONGO_HOST` → Intranet host IP/hostname
-
-Ensure firewall/routing allows: IoT VLAN → Intranet VLAN on Orion port (1026) and MongoDB port (27017).
-
----
-
-## 4. Concerns and Mitigations
-
-| Concern | Mitigation |
-|---------|------------|
-| **Config per host** | Intranet host: Orion/Mongo use localhost/service names. IoT host: env overrides for `IOTA_CB_HOST`, `IOTA_MONGO_HOST` pointing to Intranet. |
-| **MongoDB accessibility** | MongoDB on Intranet must listen on a reachable interface (or via tunnel). Restrict source IPs to IoT VLAN. |
-| **Discovery placement** | Discovery service goes in `iot` profile (device-facing). |
-| **Test/dev parity** | Full-stack mode uses internal hostnames (`orion`, `mongo-db`). Same compose file; profile selects services. |
-| **Volume persistence** | MongoDB volume: when split, only Intranet host has it. IOTA has no persistent volume by default (device config in MongoDB). |
+**Provision and subscription**:
+- Provision: run on South host (POST to IOTA)
+- Register subscription: run on North host (POST to Orion)
 
 ---
 
-## 5. Recommended Profile Layout (Draft)
+## 4. Config for Split
 
-```
-services:
-  orion:
-    profiles: [intranet]
-    # ...
+| Variable | North host | South host (split) |
+|----------|------------|--------------------|
+| IOTA_CB_HOST | orion (n/a) | North host IP |
+| IOTA_MONGO_HOST | mongo-db (n/a) | North host IP |
+| PYLON_MODE | north | south |
 
-  mongo-db:
-    profiles: [intranet]
-    # ...
+---
 
-  iot-agent-json:
-    profiles: [iot]
-    depends_on: []   # when split, no container dependency; relies on network
-    environment:
-      - IOTA_CB_HOST=${IOTA_CB_HOST:-orion}      # override on IoT host
-      - IOTA_MONGO_HOST=${IOTA_MONGO_HOST:-mongo-db}
-    # ...
+## 5. Network and Firewall
 
-  # discovery:   # future
-  #   profiles: [iot]
-  #   ...
-```
-
-For full-stack (both profiles): `orion` and `mongo-db` exist, so `IOTA_CB_HOST=orion` and `IOTA_MONGO_HOST=mongo-db` work. For IoT-only: set `IOTA_CB_HOST` and `IOTA_MONGO_HOST` in config to the Intranet host.
+- IoT VLAN → Intranet: allow Orion (1026), MongoDB (27017)
+- MongoDB on North: bind to interface reachable from South, or use tunnel
+- Same Docker network name on both hosts if Odoo shares it; otherwise create network on each
 
 ---
 
 ## 6. Checklist for Split Deployment
 
-- [ ] Intranet host: run with `--profile intranet`
-- [ ] IoT host: set `IOTA_CB_HOST`, `IOTA_MONGO_HOST` in config; run with `--profile iot`
-- [ ] Network: allow IoT → Intranet on Orion (1026) and MongoDB (27017)
-- [ ] MongoDB: bind to interface reachable from IoT, or use appropriate network config
+- [ ] North host: `./setup.sh` → North; MongoDB listen on reachable interface
+- [ ] South host: set `IOTA_CB_HOST`, `IOTA_MONGO_HOST` in config; `./setup.sh` → South
+- [ ] Firewall: allow South → North on 1026, 27017
+- [ ] Provision: run on South host after both are up
+- [ ] Register subscription: run on North host

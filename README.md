@@ -13,23 +13,24 @@ LQS-IoT_Pylon is the "steel pylon" of factory digitalisation—a lightweight inf
 
 ```txt
 LQS-IoT_Pylon/
-├── docker-compose.yml        # Assembly: Orion / IoT Agent / MongoDB on the Pylon
+├── docker-compose.north.yml  # Orion + MongoDB (Intranet)
+├── docker-compose.south.yml  # IoT Agent (device-facing)
 │
 ├── components/               # Core components (one service per folder)
 │   ├── orion/                # FIWARE Orion Context Broker
 │   ├── iota-json/            # IoT Agent for JSON (device ingress/egress)
 │   └── mongodb/              # MongoDB for Orion and IoT Agent
 │
-├── config.example/           # Config template (copy to config/ when deploying)
-│   └── config.env            # Global env (ports, hosts, FIWARE headers, Odoo URL)
-│
-├── setup.sh                  # One-time setup (config, provision, subscription, systemd)
-├── run.sh                    # Start stack (docker compose up -d)
+├── config.example/
+│   └── config.env
+├── setup.sh                  # Install North / South / Full-stack
+├── run.sh                    # Start stack (north | south | full)
 ├── ops/
-│   ├── backup_db.sh          # MongoDB backup
+│   ├── stop.sh               # Stop stack (reads PYLON_MODE)
+│   ├── backup_db.sh
 │   ├── provision_service_group.sh
 │   ├── register_subscription.sh
-│   └── systemd/pylon.service # Systemd unit (start on boot)
+│   └── systemd/pylon.service
 │
 └── README.md
 ```
@@ -40,11 +41,11 @@ LQS-IoT_Pylon/
    ```bash
    ./setup.sh
    ```
-   This: copies `config.example` to `config`, creates Docker network, starts stack, provisions IoT Agent service groups, registers Orion subscription, optionally installs systemd.
+   Choose: North / South / Full-stack. This creates config, network, starts stack.
 
-2. **Start/restart** (after `docker compose down` or reboot)
+2. **Start/restart**
    ```bash
-   ./run.sh
+   ./run.sh [--mode north|south|full]   # default: PYLON_MODE from config
    ```
 
 3. **Check services**

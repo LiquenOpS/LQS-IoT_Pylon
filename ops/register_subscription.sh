@@ -22,7 +22,7 @@ echo "Registering Orion subscription for Yardmaster..."
 echo "------------------------------------------------"
 
 HTTP_CODE="$(
-  curl -s -o /dev/null -w "%{http_code}" -L -X POST "http://${HOST}:${ORION_PORT}/v2/subscriptions" \
+  curl -s -o /dev/null -w "%{http_code}" -L -X POST "http://localhost:${ORION_PORT}/v2/subscriptions" \
     -H "Content-Type: application/json" \
     -H "${HEADER_FIWARE_SERVICE}" \
     -H "${HEADER_FIWARE_SERVICEPATH}" \
