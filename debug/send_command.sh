@@ -40,8 +40,10 @@ echo "  3) ledConfig        - Custom JSON (e.g. {\"runtime\":{\"effects_playlist
 echo "  4) playlistResume"
 echo "  5) playlistAdd      - Add effect to playlist"
 echo "  6) playlistRemove   - Remove from playlist"
+echo "  7) setAdopted true  - Mark device adopted (fetches supportedEffects)"
+echo "  8) setAdopted false - Mark device unadopted"
 echo ""
-read -p "Choice [1-6]: " CMD_CHOICE
+read -p "Choice [1-8]: " CMD_CHOICE
 
 build_payload() {
   case "$CMD_CHOICE" in
@@ -60,6 +62,8 @@ build_payload() {
       read -p "Effect name to remove: " EFF
       echo "{\"playlistRemove\":{\"type\":\"command\",\"value\":{\"effect\":\"${EFF}\"}}}"
       ;;
+    7) echo '{"setAdopted":{"type":"command","value":true}}' ;;
+    8) echo '{"setAdopted":{"type":"command","value":false}}' ;;
     *)
       echo "Invalid choice." >&2
       exit 1
@@ -71,8 +75,8 @@ PAYLOAD=$(build_payload)
 echo ""
 echo "PATCH ${ATTRS_URL}/${ENTITY_ID}/attrs?type=Yardmaster"
 echo "Payload: $PAYLOAD"
-read -p "Send? [y/N]: " CONFIRM
-[[ "$CONFIRM" =~ ^[yY] ]] || exit 0
+read -p "Send? [Y/n]: " CONFIRM
+[[ "$CONFIRM" =~ ^[nN]$ ]] && exit 0
 
 HTTP_CODE=$(curl -s -o /tmp/send_cmd_resp -w "%{http_code}" -X PATCH \
   "${ATTRS_URL}/${ENTITY_ID}/attrs?type=Yardmaster" \
