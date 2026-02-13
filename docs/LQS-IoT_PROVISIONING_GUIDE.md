@@ -14,11 +14,70 @@
 | **2** | **Existing type + new features** | Yardmaster gains lipstick machine support (same Yardmaster, new capability) | Provision template only; re-provision instances |
 | **3** | **New device instance** | Adding another physical Glimmer+Yardmaster unit | New device_id, endpoint; same type and template |
 
-**Discovery** (planned): applies to (3). See [§6 Discovery Plan](#6-discovery-plan-planned).
+**Discovery** (planned): applies to (3). See [§7 Discovery Plan](#7-discovery-plan-planned).
 
 ---
 
-## 2. User Entry Points (No Direct `ops/` Execution)
+## 2. Yardmaster Runtime (Heartbeat, Attributes, Adopt Flow)
+
+After provision, Yardmaster sends measures to IOTA South. Behavior depends on adopt state.
+
+### Summary
+
+| State | Payload | When |
+|-------|---------|------|
+| **Not adopted** | `deviceStatus`, `supportedType`, `adopted` (false) | Retry every 30 s until adopt |
+| **Adopted** | `deviceStatus`, `adopted` (true) | Heartbeat every 2 min |
+
+**adopted**: Always present, `true` or `false`. Persisted on Yardmaster (survives restart).
+
+**Provision requirements**: Attributes `deviceStatus`, `supportedType`, `adopted`; when LEDStrip enabled add `supportedEffects`. Command `setAdopted`.
+
+### Before Adopt
+
+- Yardmaster sends: `deviceStatus`, `supportedType`, `adopted: false`
+- **supportedType**: From config (`ENABLE_SIGNAGE`, `ENABLE_LED_STRIP`). Values: `Signage`, `LEDStrip`, or `Signage,LEDStrip`
+- Retries every 30 s (e.g. if IOTA was down at startup); keeps retrying until adopt
+- **supportedEffects**: Not sent here; only when `setAdopted` is received
+
+### On Adopt (Odoo → setAdopted command)
+
+1. Yardmaster receives `setAdopted` command
+2. Persists `adopted: true` to file
+3. Fetches type-specific attrs and sends to IOTA:
+   - **LEDStrip**: Glimmer `GET /api/config` → `supportedEffects`
+   - **Signage**: (future type-specific attrs)
+4. Subsequent heartbeats: `deviceStatus`, `adopted: true` only (no more supportedType)
+
+### On Unadopt (Odoo → setAdopted command, value false)
+
+1. Yardmaster receives `setAdopted` with `false`
+2. Persists `adopted: false` to file
+3. Resumes sending `supportedType` in heartbeat (so re-adopt can see capabilities)
+
+### Heartbeat
+
+- **Not adopted**: `deviceStatus`, `supportedType`, `adopted: false` — retry every **30 s** until adopt
+- **Adopted**: `deviceStatus`, `adopted: true` — every **2 min**
+
+Purpose: Liveness; triggers Orion subscription → Odoo `update_last_seen`.
+
+### Sync Check (Odoo)
+
+Odoo compares: has adopt record (ledstrip/signage) vs Orion `adopted`. Mismatch → show warning; user may unadopt and re-adopt.
+
+### Failure Handling
+
+| Scenario | Behavior |
+|----------|----------|
+| IOTA down at startup (not adopted) | Retry supportedType + adopted every 30 s until adopt |
+| IOTA down during heartbeat | POST fails, logged, next tick retries |
+| setAdopted command fails | Yardmaster stays in current state; Odoo may show sync warning |
+| Yardmaster restart (adopted) | Load adopted from file; sends adopted=true, no supportedType |
+
+---
+
+## 3. User Entry Points (No Direct `ops/` Execution)
 
 Users only run `./setup.sh` or `./run.sh` at the repo root. `ops/` scripts are internal. Pylon and Yardmaster each have a `setup.sh`; choose **Install essentials**, **Provision**, or **Install systemd** as needed. Run Install essentials first; edit config; then Provision.
 
@@ -31,7 +90,7 @@ Users only run `./setup.sh` or `./run.sh` at the repo root. `ops/` scripts are i
 
 ---
 
-## 3. Fresh Deployment: From Zero to First Device
+## 4. Fresh Deployment: From Zero to First Device
 
 For a brand-new deployment, the flow is 1 → 2 (if needed) → 3:
 
@@ -69,9 +128,9 @@ For a brand-new deployment, the flow is 1 → 2 (if needed) → 3:
 
 ---
 
-## 4. Operation Details
+## 5. Operation Details
 
-### 4.1 (1) New Device Type
+### 5.1 (1) New Device Type
 
 **Example**: Yardmaster did not exist; now we add it.
 
@@ -82,7 +141,7 @@ For a brand-new deployment, the flow is 1 → 2 (if needed) → 3:
 | 3 | Pylon: `./setup.sh` → **Provision** | Pylon |
 | 4 | (Optional) Run Yardmaster setup for first instance — see (3) | Device repo |
 
-### 4.2 (2) Existing Type + New Features
+### 5.2 (2) Existing Type + New Features
 
 **Example**: Yardmaster already exists; we add lipstick machine support.
 
@@ -94,7 +153,7 @@ For a brand-new deployment, the flow is 1 → 2 (if needed) → 3:
 
 No change to Pylon service groups. Only IOTA device registration is updated.
 
-### 4.3 (3) New Device Instance
+### 5.3 (3) New Device Instance
 
 **Example**: Another physical Yardmaster+Glimmer unit. Same type, same features.
 
@@ -107,11 +166,11 @@ Adding a new instance: **Manual** (current) or **Discovery** (planned).
 | 1 | On the new unit: run Yardmaster `./setup.sh` → **Install essentials**. When prompted: enter new `DEVICE_ID`, `DEVICE_NAME`. Ensure `config/config.env` has correct `YARDMASTER_HOST` (this machine's reachable address) and `YARDMASTER_PORT`. Optionally edit IOTA_HOST if Pylon is elsewhere. |
 | 2 | Run Yardmaster `./setup.sh` → **Provision**. Script reads config and POSTs to IOTA. |
 
-**Discovery** (planned): Device self-registers; Pylon auto-provisions or runs a script. See [§6](#6-discovery-plan-planned).
+**Discovery** (planned): Device self-registers; Pylon auto-provisions or runs a script. See [§7](#7-discovery-plan-planned).
 
 ---
 
-## 5. Background: apikey and Provision Flow
+## 6. Background: apikey and Provision Flow
 
 **apikey**: Routing key in FIWARE IoT Agent. The Yardmaster service group uses `YardmasterKey`. Yardmaster config must use the same apikey. Device and service group must match.
 
@@ -119,7 +178,7 @@ Adding a new instance: **Manual** (current) or **Discovery** (planned).
 
 ---
 
-## 6. Discovery Plan (Planned)
+## 7. Discovery Plan (Planned)
 
 Discovery applies to operation (3) — adding new device instances. Alternative to Manual: device self-registers; provision is automated.
 
@@ -138,31 +197,31 @@ Discovery applies to operation (3) — adding new device instances. Alternative 
 
 ---
 
-## 7. Handling an Already-Running Pylon (Operations 1–3)
+## 8. Handling an Already-Running Pylon (Operations 1–3)
 
-### 7.1 (1) Add New Device Type
+### 8.1 (1) Add New Device Type
 
 1. Edit `ops/provision_service_group.sh`; add new service to payload.
 2. Pylon: `./setup.sh` → **Provision**.
 3. Create provision script in new device repo; add that repo's `./setup.sh` entry point.
 
-### 7.2 (2) Update Existing Type (New Features)
+### 8.2 (2) Update Existing Type (New Features)
 
 1. Update device provision script (new commands/attributes).
 2. On each Yardmaster unit: Yardmaster `./setup.sh` → **Provision**. No Pylon restart.
 
-### 7.3 (3) Add New Instance
+### 8.3 (3) Add New Instance
 
 1. On the new unit: Yardmaster `./setup.sh` → **Install essentials** then **Provision**, with new DEVICE_ID, DEVICE_NAME, correct YARDMASTER_HOST.
 2. No Pylon change.
 
-### 7.4 Change Device Endpoint
+### 8.4 Change Device Endpoint
 
 1. Update device config (e.g. `YARDMASTER_PORT`, host).
 2. Restart device process: `./run.sh`.
 3. Yardmaster `./setup.sh` → **Provision** so IOTA has the new endpoint.
 
-### 7.5 Remove Device or Service Group
+### 8.5 Remove Device or Service Group
 
 **Device (Deprovision)**:
 - Yardmaster: `./setup.sh` → **Deprovision** (option 3). Runs `ops/deprovision_device.sh` which:
@@ -180,29 +239,29 @@ Returns 204 on success.
 
 **Service group**: Depends on IoT Agent; some support DELETE.
 
-### 7.6 Re-Test Flow (Full Reset)
+### 8.6 Re-Test Flow (Full Reset)
 
 To re-test provisioning and adopt from scratch:
 
 | Step | Action |
 |------|--------|
-| 1 | Yardmaster: `./setup.sh` → **Deprovision** (option 3) to remove from IOTA and Orion |
-| 2 | Odoo: Fleet → Device List → open device → **Unadopt** (removes LED-Strip/Signage mgmt records) |
+| 1 | Odoo: Fleet → Device List → open device → **Unadopt** (sends setAdopted=false to Yardmaster; removes LED-Strip/Signage mgmt records) |
+| 2 | Yardmaster: `./setup.sh` → **Deprovision** (option 3) to remove from IOTA and Orion |
 | 3 | (Optional) Delete device from Fleet if you want it gone from Odoo — device disappears when Orion entity is deleted and no more heartbeats |
 | 4 | Yardmaster: `./setup.sh` → **Install essentials** → answer "y" to "Reset device config for re-test" if re-prompting ID/name |
 | 5 | Yardmaster: `./setup.sh` → **Provision** |
-| 6 | Wait for heartbeat; device appears in Fleet; run Adopt again |
+| 6 | Ensure Yardmaster process is running (`./run.sh` or systemd); wait for heartbeat; device appears in Fleet; run Adopt again |
 
 ---
 
-## 8. Declarative and Idempotent Provision
+## 9. Declarative and Idempotent Provision
 
 - **Service groups**: Payload = full desired set. Re-run = idempotent.
 - **Devices**: Payload = full desired device config. Re-run = update or create. Document IoT Agent behaviour (POST update vs conflict).
 
 ---
 
-## 9. RESTful API Summary (FIWARE IoT Agent North)
+## 10. RESTful API Summary (FIWARE IoT Agent North)
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -217,7 +276,7 @@ All require FIWARE service and servicepath headers.
 
 ---
 
-## 10. Checklist Summary
+## 11. Checklist Summary
 
 | Operation | User action |
 |-----------|-------------|
