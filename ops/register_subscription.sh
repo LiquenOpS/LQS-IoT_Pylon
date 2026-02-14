@@ -27,7 +27,7 @@ HTTP_CODE="$(
     -H "${HEADER_FIWARE_SERVICE}" \
     -H "${HEADER_FIWARE_SERVICEPATH}" \
     --data-raw "{
-  \"description\": \"Notify Odoo when Yardmaster deviceStatus changes\",
+  \"description\": \"Notify Odoo when Yardmaster deviceStatus or adopted changes\",
   \"subject\": {
     \"entities\": [
       {
@@ -37,7 +37,8 @@ HTTP_CODE="$(
     ],
     \"condition\": {
       \"attrs\": [
-        \"deviceStatus\"
+        \"deviceStatus\",
+        \"adopted\"
       ]
     }
   },
