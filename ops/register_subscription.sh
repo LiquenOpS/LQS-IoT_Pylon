@@ -14,15 +14,32 @@ fi
 
 ODOO_HOST="${ODOO_HOST:-odoo}"
 ODOO_PORT="${ODOO_PORT:-8069}"
+ORION_HOST="${ORION_HOST:-localhost}"
 ORION_PORT="${ORION_PORT:-1026}"
+SUB_URL="http://${ORION_HOST}:${ORION_PORT}/v2/subscriptions"
 
 ODOO_URL="http://${ODOO_HOST}:${ODOO_PORT}/update_last_seen"
 
 echo "Registering Orion subscription for Yardmaster..."
 echo "------------------------------------------------"
 
+# Remove existing Yardmaster→Odoo subscriptions to avoid duplicates
+SUBS=$(curl -s -L -X GET "$SUB_URL" -H "${HEADER_FIWARE_SERVICE}" -H "${HEADER_FIWARE_SERVICEPATH}" 2>/dev/null || echo "[]")
+for id in $(echo "$SUBS" | jq -r --arg url "$ODOO_URL" '
+  .[] | select(
+    (.subject.entities[]? | .type == "Yardmaster") and
+    (.notification.http.url? == $url)
+  ) | .id
+'); do
+  [[ -n "$id" ]] || continue
+  echo "Removing duplicate subscription: $id"
+  curl -s -o /dev/null -w "" -L -X DELETE "${SUB_URL}/${id}" \
+    -H "${HEADER_FIWARE_SERVICE}" \
+    -H "${HEADER_FIWARE_SERVICEPATH}" || true
+done
+
 HTTP_CODE="$(
-  curl -s -o /dev/null -w "%{http_code}" -L -X POST "http://localhost:${ORION_PORT}/v2/subscriptions" \
+  curl -s -o /dev/null -w "%{http_code}" -L -X POST "$SUB_URL" \
     -H "Content-Type: application/json" \
     -H "${HEADER_FIWARE_SERVICE}" \
     -H "${HEADER_FIWARE_SERVICEPATH}" \
