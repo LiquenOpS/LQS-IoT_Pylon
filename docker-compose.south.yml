@@ -1,13 +1,15 @@
-# Pylon South: IoT Agent (device-facing). Full-stack: IOTA_CB_HOST=orion, IOTA_MONGO_HOST=mongo-db.
-# South-only: set IOTA_CB_HOST and IOTA_MONGO_HOST to North host IP.
+# Pylon South: IoT Agent + MongoDB (device-facing). Self-contained; no cross-host DB connection.
+# Full-stack: IOTA_CB_HOST=orion (reaches North via pylon-net). IOTA uses local mongo-iota.
+# South-only: set IOTA_CB_HOST to North host IP.
 
 services:
   iot-agent-json:
-    labels:
-      org.fiware: 'signage-project'
     image: fiware/iotagent-json:${IOTA_JSON_VERSION}
     hostname: iot-agent-json
     container_name: fiware-iot-agent-json
+    depends_on:
+      mongo-iota:
+        condition: service_healthy
     networks:
       - pylon_net
     ports:
@@ -23,7 +25,7 @@ services:
       - IOTA_LOG_LEVEL=${IOTA_LOG_LEVEL:-DEBUG}
       - IOTA_TIMESTAMP=${IOTA_TIMESTAMP:-true}
       - IOTA_REGISTRY_TYPE=${IOTA_REGISTRY_TYPE:-mongodb}
-      - IOTA_MONGO_HOST=${IOTA_MONGO_HOST:-mongo-db}
+      - IOTA_MONGO_HOST=${IOTA_MONGO_HOST:-mongo-iota}
       - IOTA_MONGO_PORT=${MONGO_DB_PORT}
       - IOTA_MONGO_DB=${IOTA_MONGO_DB:-iotagentjson}
       - IOTA_PROVIDER_URL=http://iot-agent-json:${IOTA_NORTH_PORT}
@@ -32,7 +34,27 @@ services:
       test: curl --fail -s http://iot-agent-json:${IOTA_NORTH_PORT}/iot/about || exit 1
       interval: 5s
 
+  mongo-iota:
+    image: mongo:${MONGO_DB_VERSION}
+    hostname: mongo-iota
+    container_name: db-mongo-iota
+    expose:
+      - "${MONGO_DB_PORT}"
+    networks:
+      - pylon_net
+    volumes:
+      - mongo-iota:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
 networks:
   pylon_net:
     name: ${PYLON_NETWORK_NAME:-pylon-net}
     external: true
+
+volumes:
+  mongo-iota: ~

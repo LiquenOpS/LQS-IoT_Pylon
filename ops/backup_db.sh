@@ -7,7 +7,7 @@ cd "${ROOT_DIR}"
 
 TIMESTAMP="$(date +'%Y%m%d-%H%M%S')"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
-CONTAINER_NAME="${MONGO_CONTAINER_NAME:-db-mongo}"
+CONTAINER_NAME="${MONGO_CONTAINER_NAME:-db-mongo-orion}"
 MONGO_DB_PORT="${MONGO_DB_PORT:-27017}"
 
 mkdir -p "${BACKUP_DIR}"

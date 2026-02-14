@@ -2,30 +2,26 @@
 
 services:
   orion:
-    labels:
-      org.fiware: 'signage-project'
     image: fiware/orion:${ORION_VERSION}
     hostname: orion
     container_name: fiware-orion
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      - mongo-db
+      - mongo-orion
     networks:
       - pylon_net
     ports:
       - "${ORION_PORT}:${ORION_PORT}"
-    command: -dbURI mongodb://mongo-db:${MONGO_DB_PORT} -logLevel ${ORION_LOG_LEVEL:-DEBUG} -noCache
+    command: -dbURI mongodb://mongo-orion:${MONGO_DB_PORT} -logLevel ${ORION_LOG_LEVEL:-DEBUG} -noCache
     healthcheck:
       test: curl --fail -s http://orion:${ORION_PORT}/version || exit 1
       interval: 5s
 
-  mongo-db:
-    labels:
-      org.fiware: 'signage-project'
+  mongo-orion:
     image: mongo:${MONGO_DB_VERSION}
-    hostname: mongo-db
-    container_name: db-mongo
+    hostname: mongo-orion
+    container_name: db-mongo-orion
     expose:
       - "${MONGO_DB_PORT}"
     ports:
@@ -33,7 +29,7 @@ services:
     networks:
       - pylon_net
     volumes:
-      - mongo-db:/data/db
+      - mongo-orion:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 5s
@@ -47,4 +43,4 @@ networks:
     external: true
 
 volumes:
-  mongo-db: ~
+  mongo-orion: ~
