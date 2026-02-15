@@ -24,8 +24,6 @@ services:
     container_name: db-mongo-orion
     expose:
       - "${MONGO_DB_PORT}"
-    ports:
-      - "${MONGO_DB_PORT}:${MONGO_DB_PORT}"
     networks:
       - pylon_net
     volumes:
