@@ -6,12 +6,14 @@
 
 ## 1. Four Scenarios
 
-| # | Odoo | North | South | ODOO_HOST | IOTA_CB_HOST / IOTA_MONGO_HOST |
-|---|------|-------|-------|-----------|---------------------------------|
-| 1 | A | A | A | host.docker.internal | orion, mongo-db |
+| # | Odoo | North | South | ODOO_HOST | IOTA_CB_HOST |
+|---|------|-------|-------|-----------|---------------|
+| 1 | A | A | A | host.docker.internal | orion |
 | 2 | A | A | B | host.docker.internal | North host IP |
-| 3 | A | B | B | Odoo host IP | orion, mongo-db |
+| 3 | A | B | B | Odoo host IP | orion |
 | 4 | A | B | C | Odoo host IP | North host IP |
+
+South has its own MongoDB (mongo-iota). No IOTA_MONGO_HOST override needed; no cross-host DB connection.
 
 Same letter = same host. All services run in Docker.
 
@@ -45,27 +47,27 @@ Pylon North compose includes `extra_hosts` so Orion can reach the host on all su
 ### Scenario 1: All on same host (A)
 
 - ODOO_HOST=host.docker.internal
-- IOTA_CB_HOST=orion, IOTA_MONGO_HOST=mongo-db
+- IOTA_CB_HOST=orion. South uses local mongo-iota.
 - Setup: Full-stack
 - Pylon uses pylon-net. Odoo uses its own network. No shared network.
 
 ### Scenario 2: Odoo+North on A, South on B
 
 - Host A: Odoo, North. ODOO_HOST=host.docker.internal
-- Host B: South. IOTA_CB_HOST=A's IP, IOTA_MONGO_HOST=A's IP
-- Firewall: B → A on 1026, 27017
+- Host B: South. IOTA_CB_HOST=A's IP. South uses local mongo-iota (no cross-host DB).
+- Firewall: B → A on 1026 only (Orion)
 
 ### Scenario 3: Odoo on A, North+South on B
 
 - Host A: Odoo
-- Host B: North, South. ODOO_HOST=A's IP. IOTA_CB_HOST=orion, IOTA_MONGO_HOST=mongo-db
+- Host B: North, South. ODOO_HOST=A's IP. IOTA_CB_HOST=orion. South uses local mongo-iota.
 - Firewall: B → A on 8069 (if Odoo needs to be reached)
 
 ### Scenario 4: All separate (A, B, C)
 
 - ODOO_HOST=A's IP
-- IOTA_CB_HOST=B's IP, IOTA_MONGO_HOST=B's IP
-- Firewall: C → B on 1026, 27017; B → A on 8069 as needed
+- IOTA_CB_HOST=B's IP. South (C) uses local mongo-iota.
+- Firewall: C → B on 1026; B → A on 8069 as needed
 
 ---
 
@@ -75,14 +77,21 @@ Pylon North compose includes `extra_hosts` so Orion can reach the host on all su
 |----------|------------|---|---|---|
 | ODOO_HOST | host.docker.internal | host.docker.internal | A's IP | A's IP |
 | IOTA_CB_HOST | orion | North IP | orion | North IP |
-| IOTA_MONGO_HOST | mongo-db | North IP | mongo-db | North IP |
+| IOTA_MONGO_HOST | mongo-iota (local) | mongo-iota (local) | mongo-iota (local) | mongo-iota (local) |
 
 ---
 
-## 6. Checklist
+## 6. Upgrade Notes
+
+- **South DB split**: South has its own MongoDB (`mongo-iota`). Re-run provision on South host after upgrade.
+- **North DB rename**: `mongo-db` → `mongo-orion`. Fresh deploy uses new volume; existing Orion data in old `mongo-db` volume is not migrated.
+
+---
+
+## 7. Checklist
 
 - [ ] Set PYLON_MODE (north / south / full) in setup
 - [ ] Set ODOO_HOST per scenario
-- [ ] Set IOTA_CB_HOST, IOTA_MONGO_HOST when South is on a different host
+- [ ] Set IOTA_CB_HOST when South is on a different host (IOTA_MONGO_HOST stays mongo-iota)
 - [ ] Provision: run on South host
 - [ ] Register subscription: run on North host

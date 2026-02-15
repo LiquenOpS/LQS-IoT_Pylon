@@ -27,9 +27,9 @@ case "$CHOICE" in
 
     echo ""
     echo "Which part to run on this host?"
-    echo "  n) North only (Orion + MongoDB, Intranet)"
-    echo "  s) South only (IoT Agent, device-facing)"
-    echo "  f) Full-stack (both on this host)"
+    echo "  n) North only (Orion + mongo-orion, Intranet)"
+    echo "  s) South only (IoT Agent + mongo-iota, device-facing)"
+    echo "  f) Full-stack (North + South on this host)"
     echo ""
     read -p "Choice [n/s/f]: " PART
     case "$PART" in
