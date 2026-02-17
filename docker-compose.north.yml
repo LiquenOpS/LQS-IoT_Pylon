@@ -1,4 +1,5 @@
-# Pylon North: Orion + MongoDB (Intranet). Run with south for full-stack.
+# Pylon North: Orion + MongoDB (Orion's DB)
+# Run: docker compose --env-file config/config.env -f docker-compose.north.yml ...
 
 services:
   orion:
@@ -8,22 +9,23 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      - mongo-orion
+      mongo-orion:
+        condition: service_healthy
     networks:
       - pylon_net
     ports:
       - "${ORION_PORT}:${ORION_PORT}"
-    command: -dbURI mongodb://mongo-orion:${MONGO_DB_PORT} -logLevel ${ORION_LOG_LEVEL:-DEBUG} -noCache
+    command: -dbURI mongodb://mongo-orion:${MONGO_ORION_PORT} -logLevel ${ORION_LOG_LEVEL:-DEBUG} -noCache
     healthcheck:
       test: curl --fail -s http://orion:${ORION_PORT}/version || exit 1
       interval: 5s
 
   mongo-orion:
-    image: mongo:${MONGO_DB_VERSION}
+    image: mongo:${MONGO_ORION_VERSION}
     hostname: mongo-orion
     container_name: db-mongo-orion
     expose:
-      - "${MONGO_DB_PORT}"
+      - "${MONGO_ORION_PORT}"
     networks:
       - pylon_net
     volumes:

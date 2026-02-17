@@ -1,6 +1,6 @@
-# Pylon South: IoT Agent + MongoDB (device-facing). Self-contained; no cross-host DB connection.
-# Full-stack: IOTA_CB_HOST=orion (reaches North via pylon-net). IOTA uses local mongo-iota.
-# South-only: set IOTA_CB_HOST to North host IP.
+# Pylon South: IoT Agent + MongoDB (IOTA's DB)
+# Full-stack: IOTA_CB_HOST=orion (same pylon-net). South-only: IOTA_CB_HOST=North host IP.
+# Run: docker compose --env-file config/config.env -f docker-compose.south.yml ...
 
 services:
   iot-agent-json:
@@ -26,8 +26,8 @@ services:
       - IOTA_TIMESTAMP=${IOTA_TIMESTAMP:-true}
       - IOTA_REGISTRY_TYPE=${IOTA_REGISTRY_TYPE:-mongodb}
       - IOTA_MONGO_HOST=${IOTA_MONGO_HOST:-mongo-iota}
-      - IOTA_MONGO_PORT=${MONGO_DB_PORT}
-      - IOTA_MONGO_DB=${IOTA_MONGO_DB:-iotagentjson}
+      - IOTA_MONGO_PORT=${MONGO_IOTA_PORT}
+      - IOTA_MONGO_DB=${MONGO_IOTA_DB:-iotagentjson}
       - IOTA_PROVIDER_URL=http://iot-agent-json:${IOTA_NORTH_PORT}
       - IOTA_HTTP_PORT=${IOTA_SOUTH_PORT}
     healthcheck:
@@ -35,11 +35,11 @@ services:
       interval: 5s
 
   mongo-iota:
-    image: mongo:${MONGO_DB_VERSION}
+    image: mongo:${MONGO_IOTA_VERSION}
     hostname: mongo-iota
     container_name: db-mongo-iota
     expose:
-      - "${MONGO_DB_PORT}"
+      - "${MONGO_IOTA_PORT}"
     networks:
       - pylon_net
     volumes:

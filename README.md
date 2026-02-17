@@ -32,6 +32,7 @@ LQS-IoT_Pylon/
 │   ├── register_subscription.sh
 │   └── systemd/pylon.service
 ├── debug/
+│   ├── logs.sh               # View logs (use --env-file, no "variable not set" warnings)
 │   ├── list_devices.sh       # IOTA device registry
 │   ├── list_entities.sh      # Orion NGSI entities
 │   ├── list_services.sh      # IOTA service groups
