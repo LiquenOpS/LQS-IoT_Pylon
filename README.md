@@ -33,10 +33,7 @@ LQS-IoT_Pylon/
 │   └── systemd/pylon.service
 ├── debug/
 │   ├── logs.sh               # View logs (use --env-file, no "variable not set" warnings)
-│   ├── list_devices.sh       # IOTA device registry
-│   ├── list_entities.sh      # Orion NGSI entities
-│   ├── list_services.sh      # IOTA service groups
-│   └── send_command.sh       # Interactive: send command to device via Orion
+│   └── menu.sh               # Interactive: list, delete, send command (all-in-one)
 │
 └── README.md
 ```
@@ -61,19 +58,12 @@ LQS-IoT_Pylon/
    curl "http://localhost:4041/iot/about"     # IoT Agent JSON
    ```
 
-4. **List devices / entities** (debug)
+4. **Debug menu** (interactive)
    ```bash
-   ./debug/list_devices.sh    # IOTA device registry
-   ./debug/list_entities.sh   # Orion entities (after first heartbeat)
-   ./debug/list_services.sh   # IOTA service groups
+   ./debug/menu.sh            # List entities/devices/services, delete, send command
    ```
 
-5. **Send command** (debug, interactive)
-   ```bash
-   ./debug/send_command.sh    # Pick device, pick command (e.g. LED off), send to Orion
-   ```
-
-6. **Backup MongoDB**
+5. **Backup MongoDB**
    ```bash
    ./ops/backup_db.sh
    # Output: ./backups/mongo-backup-YYYYMMDD-HHMMSS.gz

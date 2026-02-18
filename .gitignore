@@ -1,0 +1,10 @@
+# Local config (copy config.example to config and edit)
+config/
+
+# Backups (from backup_db.sh)
+backups/
+
+# Temp / debug
+*.tmp
+/tmp/
+.DS_Store

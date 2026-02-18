@@ -14,10 +14,12 @@ fi
 
 IOTA_CB_HOST="${IOTA_CB_HOST:-orion}"
 ORION_PORT="${ORION_PORT:-1026}"
-
 ORION_BROKER="http://${IOTA_CB_HOST}:${ORION_PORT}"
 
-echo "Provisioning IoT Agent with Yardmaster service group..."
+# IOTA config group: (apikey, resource) is unique. One group per apikey for /iot/json.
+# Device-level entity_type (LEDStrip/Signage) is set at device provision (Yardmaster).
+# Create one group - entity_type here is default for autoprovision only.
+echo "Provisioning IoT Agent service group (YardmasterKey, LEDStrip+Signage)..."
 echo "------------------------------------------------------"
 
 HTTP_CODE="$(
@@ -30,17 +32,17 @@ HTTP_CODE="$(
         {
             \"apikey\": \"YardmasterKey\",
             \"cbroker\": \"${ORION_BROKER}\",
-            \"entity_type\": \"Yardmaster\",
+            \"entity_type\": \"LEDStrip\",
             \"resource\": \"/iot/json\"
         }
     ]
   }"
 )"
+case "${HTTP_CODE}" in
+  201) echo "Created" ;;
+  409) echo "Already exists" ;;
+  *) echo "HTTP ${HTTP_CODE} (expected 201/409)" >&2 ;;
+esac
 
-echo "HTTP status: ${HTTP_CODE}"
-if [[ "${HTTP_CODE}" == "201" ]]; then
-  echo "Done. Service groups created successfully."
-else
-  echo "Warning: expected 201. Check IoT Agent logs." >&2
-fi
+echo "Done."
 

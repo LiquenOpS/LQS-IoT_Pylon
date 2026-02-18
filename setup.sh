@@ -6,14 +6,15 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
 echo ""
-echo "Pylon setup — what would you like to do?"
+echo "Pylon setup - what would you like to do?"
 echo "  1) Install essentials (config, network, start stack)"
 echo "  2) Provision (service groups + subscription)"
-echo "  3) Install systemd (start on boot)"
-echo "  4) Uninstall (stop stack, remove systemd)"
-echo "  5) Exit"
+echo "  3) Deprovision (remove service groups + subscription)"
+echo "  4) Install systemd (start on boot)"
+echo "  5) Uninstall (stop stack, remove systemd)"
+echo "  6) Exit"
 echo ""
-read -p "Choice [1-5]: " CHOICE
+read -p "Choice [1-6]: " CHOICE
 
 case "$CHOICE" in
   1)
@@ -77,6 +78,12 @@ case "$CHOICE" in
     echo "Done."
     ;;
   3)
+    [ ! -f "$ROOT/config/config.env" ] && { echo "Error: config/config.env not found. Run option 1 first." >&2; exit 1; }
+    set -a && source "$ROOT/config/config.env" && set +a
+    echo ""
+    bash "$ROOT/ops/deprovision.sh"
+    ;;
+  4)
     read -p "Install systemd service (start on boot)? [y/N]: " Y
     if [[ "$Y" =~ ^[yY] ]]; then
       [ ! -f "$ROOT/config/config.env" ] && { echo "Error: config/config.env not found. Run option 1 first." >&2; exit 1; }
@@ -91,7 +98,7 @@ case "$CHOICE" in
       echo "  -> $SVC_FILE installed and started (mode=${MODE})."
     fi
     ;;
-  4)
+  5)
     echo "==> Uninstalling Pylon..."
     SVC_FILE="/etc/systemd/system/pylon.service"
     if [ -f "$SVC_FILE" ]; then
@@ -131,7 +138,7 @@ case "$CHOICE" in
     fi
     echo "Done."
     ;;
-  5)
+  6)
     echo "Bye."
     ;;
   *)
