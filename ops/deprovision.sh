@@ -25,15 +25,12 @@ ODOO_URL="http://${ODOO_HOST}:${ODOO_PORT}/update_last_seen"
 echo "==> Deprovisioning (service groups + subscription)..."
 echo ""
 
-# 1. Delete Orion Yardmaster->Odoo subscription(s)
-echo "Removing Orion subscription (Yardmaster -> Odoo)..."
+# 1. Delete Orion device subscription(s) (LEDStrip/Signage -> Odoo)
+echo "Removing Orion subscription (LEDStrip/Signage -> Odoo)..."
 SUBS=$(curl -s -L -X GET "$SUB_URL" -H "${HEADER_FIWARE_SERVICE}" -H "${HEADER_FIWARE_SERVICEPATH}" 2>/dev/null || echo "[]")
 COUNT=0
 for id in $(echo "$SUBS" | jq -r --arg url "$ODOO_URL" '
-  .[] | select(
-    (.subject.entities[]? | .type == "Yardmaster") and
-    (.notification.http.url? == $url)
-  ) | .id
+  .[] | select(.notification.http.url? == $url) | .id
 '); do
   [[ -n "$id" ]] || continue
   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -L -X DELETE "${SUB_URL}/${id}" \

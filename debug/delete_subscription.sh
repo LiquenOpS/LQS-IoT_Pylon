@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Delete Orion subscription by ID.
 # Usage: ./delete_subscription.sh [subscription_id]
-#   With no arg: list subscriptions and prompt for ID.
+#   With no arg: list subscriptions (optionally filter by entity type), prompt for ID.
 
 set -euo pipefail
 
@@ -20,11 +20,32 @@ SUB_URL="http://${ORION_HOST}:${ORION_PORT}/v2/subscriptions"
 
 SUB_ID="${1:-}"
 if [[ -z "$SUB_ID" ]]; then
-  echo "Orion subscriptions for ${FIWARE_SERVICE}:"
   SUBS=$(curl -s -L -X GET "$SUB_URL" \
     -H "${HEADER_FIWARE_SERVICE}" \
     -H "${HEADER_FIWARE_SERVICEPATH}")
-  echo "$SUBS" | jq -r '.[] | "\(.id)  \(.description)"'
+
+  echo "Filter by entity type?"
+  echo "  1) All"
+  echo "  2) LEDStrip"
+  echo "  3) Signage"
+  echo "  4) Yardmaster (legacy)"
+  read -p "Choice [1-4]: " TYPE_CHOICE
+  case "$TYPE_CHOICE" in
+    2) TYPE_FILTER="LEDStrip" ;;
+    3) TYPE_FILTER="Signage" ;;
+    4) TYPE_FILTER="Yardmaster" ;;
+    *) TYPE_FILTER="" ;;
+  esac
+
+  echo ""
+  echo "Orion subscriptions for ${FIWARE_SERVICE}:"
+  if [[ -n "$TYPE_FILTER" ]]; then
+    echo "$SUBS" | jq -r --arg t "$TYPE_FILTER" '
+      .[] | select(.subject.entities[]? | .type == $t) | "\(.id)  \(.description) (type=\(.subject.entities[0].type))"
+    '
+  else
+    echo "$SUBS" | jq -r '.[] | "\(.id)  \(.description) (types: \([.subject.entities[]?.type] | join(",")))"'
+  fi
   echo ""
   read -p "Subscription ID to delete: " SUB_ID
   [[ -z "$SUB_ID" ]] && { echo "Aborted." >&2; exit 1; }

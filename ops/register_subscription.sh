@@ -20,16 +20,13 @@ SUB_URL="http://${ORION_HOST}:${ORION_PORT}/v2/subscriptions"
 
 ODOO_URL="http://${ODOO_HOST}:${ODOO_PORT}/update_last_seen"
 
-echo "Registering Orion subscription for Yardmaster..."
+echo "Registering Orion subscription (LEDStrip, Signage -> Odoo)..."
 echo "------------------------------------------------"
 
-# Remove existing Yardmaster→Odoo subscriptions to avoid duplicates
+# Remove existing device-type subscriptions to avoid duplicates
 SUBS=$(curl -s -L -X GET "$SUB_URL" -H "${HEADER_FIWARE_SERVICE}" -H "${HEADER_FIWARE_SERVICEPATH}" 2>/dev/null || echo "[]")
 for id in $(echo "$SUBS" | jq -r --arg url "$ODOO_URL" '
-  .[] | select(
-    (.subject.entities[]? | .type == "Yardmaster") and
-    (.notification.http.url? == $url)
-  ) | .id
+  .[] | select(.notification.http.url? == $url) | .id
 '); do
   [[ -n "$id" ]] || continue
   echo "Removing duplicate subscription: $id"
@@ -44,13 +41,11 @@ HTTP_CODE="$(
     -H "${HEADER_FIWARE_SERVICE}" \
     -H "${HEADER_FIWARE_SERVICEPATH}" \
     --data-raw "{
-  \"description\": \"Notify Odoo when Yardmaster deviceStatus or adopted changes\",
+  \"description\": \"Notify Odoo when LEDStrip/Signage deviceStatus or adopted changes\",
   \"subject\": {
     \"entities\": [
-      {
-        \"idPattern\": \".*\",
-        \"type\": \"Yardmaster\"
-      }
+      {\"idPattern\": \".*\", \"type\": \"LEDStrip\"},
+      {\"idPattern\": \".*\", \"type\": \"Signage\"}
     ],
     \"condition\": {
       \"attrs\": [
